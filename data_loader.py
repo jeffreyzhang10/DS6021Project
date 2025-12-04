@@ -11,8 +11,8 @@ def load_weekly_data(weeks=range(1, 19)):
     for wk in weeks:
         wk_str = f"{wk:02d}"
 
-        input_df = read_data("input", wk_str)
-        output_df = read_data("output", wk_str)
+        input_df = read_data("train/input", wk_str)
+        output_df = read_data("train/output", wk_str)
 
         input_df["wk"] = wk
         output_df["wk"] = wk
