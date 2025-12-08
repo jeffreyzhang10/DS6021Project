@@ -9,3 +9,7 @@
 - PCA, K-means, PCR
 - additional: t-sne, umap w/ hyperparameter tuning
 - eda 
+
+## Jarrett
+- Linear Regression
+- Dashboard
