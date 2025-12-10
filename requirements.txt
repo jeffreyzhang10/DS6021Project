@@ -2,7 +2,7 @@ dash
 gunicorn
 pandas
 numpy
-sklearn 
+scikit-learn
 os 
 dash 
 plotly 
