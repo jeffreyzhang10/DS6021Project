@@ -2,10 +2,10 @@ dash
 gunicorn
 pandas
 numpy
-scikit-learn
+scikit-learn==1.5.2
 dash 
 plotly 
 matplotlib
 seaborn
-umap
+umap-learn
 streamlit
