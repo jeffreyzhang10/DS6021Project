@@ -38,4 +38,8 @@ input_data["prev_y"] = input_data.groupby(['nfl_id', 'game_id', 'play_id'])["y_c
 input_data = input_data.dropna(subset=["prev_x", "prev_y"])
 df =input_data.drop(columns=['absolute_yardline_number', 'player_name', 'player_height', 'player_weight', 'player_birth_date', 'player_position', 'wk',
                              'x', 'y', 's', 'a', 'o', 'dir', 'play_direction', 'num_frames_output'])
-df.to_csv("input_data_clean.csv")
+
+df_sample = df.sample(n=50000, random_state=42)
+
+df_sample.to_csv("input_data_clean_sample.csv", index=False)
+
