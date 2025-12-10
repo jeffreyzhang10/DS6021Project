@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 from dash.dash_table import DataTable
@@ -11,6 +12,7 @@ data = pd.read_csv("input_data_clean.csv")
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
 
 # Layout
 app.layout = html.Div([
@@ -133,4 +135,5 @@ def update_linear_regression(alpha, l1_ratio, test_size):
 
 # Run app
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8050))
+    app.run_server(host="0.0.0.0", port=port)
