@@ -7,6 +7,5 @@ dash
 plotly 
 matplotlib
 seaborn
-statsmodels
 umap
 streamlit
