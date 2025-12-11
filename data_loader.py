@@ -21,4 +21,5 @@ def load_weekly_data(weeks=range(1, 19)): # For weeks 1-18
         input_data = pd.concat([input_data, input_df], ignore_index=True)
 
     return input_data
-input_data = load_weekly_data()
+def load_supplementary():
+    return pd.read_csv("supplementary_data.csv", low_memory=False)
