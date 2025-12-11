@@ -40,6 +40,88 @@ with tab2:
     st.header("Data Table")
     st.dataframe(data.head(5000))  
 
+    st.header("Variable Descriptions")
+
+    st.markdown("""
+
+    ### **Source of Data**
+
+    These definitions directly from from the **NFL Big Data Bowl 2026** competition on Kaggle: (https://www.kaggle.com/competitions/nfl-big-data-bowl-2026-prediction/data)    
+
+    **game_id**  
+    Game identifier (numeric). Unique for each NFL game.
+
+    **play_id**  
+    Play identifier (numeric). Not unique across games — resets each game.
+
+    **player_to_predict**  
+    Boolean flag indicating whether this player's x/y location is scored in the prediction task.
+
+    **nfl_id**  
+    Unique player ID number across all players (numeric).
+
+    **frame_id**  
+    Frame counter for each game_id/play_id. Starts at 1 for every play sequence.
+
+    **play_direction**  
+    Direction the offense is moving (`left` or `right`).
+
+    **absolute_yardline_number**  
+    Yardline distance to the opponent's end zone for the possession team (numeric).
+
+    **player_name**  
+    Player’s full name (text).
+
+    **player_height**  
+    Player height (e.g., `6-2`).  
+
+    **player_weight**  
+    Player weight in pounds (numeric).
+
+    **player_birth_date**  
+    Birth date in `YYYY-MM-DD` format.
+
+    **player_position**  
+    Player’s position on the field (e.g., WR, QB, RB, TE, CB).
+
+    **player_side**  
+    Indicates whether the player is on **Offense** or **Defense**.
+
+    **player_role**  
+    Contextual role on the play:  
+    - *Defensive Coverage*  
+    - *Targeted Receiver*  
+    - *Passer*  
+    - *Other Route Runner*
+
+    **x**  
+    Player’s longitudinal field position (0–120 yards).
+
+    **y**  
+    Player’s lateral field position (0–53.3 yards).
+
+    **s**  
+    Player speed in yards/second.
+
+    **a**  
+    Player acceleration in yards/second².
+
+    **o**  
+    Player orientation in degrees (0–360). Represents which way the player is facing.
+
+    **dir**  
+    Angle of player motion in degrees (0–360). Represents direction the player is **moving**, not facing.
+
+    **num_frames_output**  
+    Number of future frames to predict for that player for a given play (numeric).
+
+    **ball_land_x**  
+    Projected football landing location along field length (0–120 yards).
+
+    **ball_land_y**  
+    Projected football landing location along field width (0–53.3 yards).
+        """)
+
 # eda
 with tab3:
     st.header("Data Analysis / EDA")
