@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from data_loader import load_weekly_data
 
-input_data = load_weekly_data()
+input_data,output_data = load_weekly_data()
 # Clean tracking data
 # Clean orientation and direction
 input_data["o_clean"] = (-(input_data["o"] - 90)) % 360
@@ -39,7 +39,13 @@ input_data = input_data.dropna(subset=["prev_x", "prev_y"])
 df =input_data.drop(columns=['absolute_yardline_number', 'player_name', 'player_height', 'player_weight', 'player_birth_date', 'player_position', 'wk',
                              'x', 'y', 's', 'a', 'o', 'dir', 'play_direction', 'num_frames_output'])
 
-df_sample = df.sample(n=50000, random_state=42)
+df_sample = df.sample(n=100000, random_state=42)
 
-df_sample.to_csv("input_data_clean_sample.csv", index=False)
+
+df_sample.to_csv("input_data_clean.csv", index=False)
+
+
+
+
+
 
