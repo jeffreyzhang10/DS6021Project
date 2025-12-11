@@ -701,6 +701,11 @@ if __name__ == "__main__":
             "is_target",           # may be NaN if no labels for that week
             "predicted_target",
             "target_prob",
+            "dx",
+            "dy",
+            "route_len",
+            "nearest_defender",
+            "dist_to_qb"
         ]
         cols_to_save = [c for c in cols_to_save if c in all_preds_df.columns]
 

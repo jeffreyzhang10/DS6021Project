@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Target Receiver Logistic Regression Explorer</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f7fb;
+      color: #222;
+    }
+
+    header {
+      background: #1f3b82;
+      color: white;
+      padding: 16px 24px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    header p {
+      margin: 4px 0 0 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    main {
+      padding: 20px 24px 40px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 3fr;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+      padding: 16px 18px 18px 18px;
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 18px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 14px;
+      margin: 4px 0 8px 0;
+      line-height: 1.4;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .metrics-table td, .metrics-table th {
+      font-size: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 14px;
+      border-radius: 4px;
+      border: none;
+      background: #1d4ed8;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1e40af;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-true {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-false {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .prob-value {
+      font-size: 32px;
+      font-weight: 600;
+      margin: 6px 0;
+    }
+
+    .prob-subtext {
+      font-size: 13px;
+      color: #4b5563;
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      margin-left: 4px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      padding: 10px 0 18px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Target Receiver Logistic Regression Explorer</h1>
+  <p>Inspect how the trained model scores different offensive players across real NFL plays.</p>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>Dataset & Model Summary</h2>
+    {% if metrics_rows %}
+      <p>This table summarizes how the model performed on the training split and across evaluation weeks.</p>
+      <table class="metrics-table">
+        <thead>
+          <tr>
+            <th>Dataset</th>
+            <th>Split</th>
+            <th>Top-1 Accuracy</th>
+            <th>Mean True Target Prob</th>
+            <th>Mean Positive Log Loss</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in metrics_rows %}
+            <tr>
+              <td>{{ row.dataset }}</td>
+              <td>{{ row.split_type }}</td>
+              <td>{{ "%.3f"|format(row.top1_accuracy) if row.top1_accuracy is not none else "N/A" }}</td>
+              <td>{{ "%.3f"|format(row.mean_true_prob) if row.mean_true_prob is not none else "N/A" }}</td>
+              <td>{{ "%.3f"|format(row.mean_pos_log_loss) if row.mean_pos_log_loss is not none else "N/A" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No metrics available. Check that training and evaluation data are present.</p>
+    {% endif %}
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Choose an Example Player</h2>
+      <p>Select an offensive player (and play) from real model predictions.</p>
+
+      {% if examples %}
+        <form method="POST" action="/">
+          <label for="example_id">Example (Game / Play / Player / Pos / Model Prob):</label>
+          <select id="example_id" name="example_id">
+            {% for ex in examples %}
+              <option value="{{ ex.id }}"
+                {% if selected_example and ex.id == selected_example.id %}selected{% endif %}
+              >
+                Game {{ ex.game_id }}, Play {{ ex.play_id }} — {{ ex.player_name }} ({{ ex.player_position }}) — p(target)={{ "%.3f"|format(ex.target_prob) }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <button type="submit">View Prediction</button>
+        </form>
+      {% else %}
+        <p>No example rows available. Check that predictions were computed.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Model View for Selected Player</h2>
+
+      {% if selected_example %}
+        <p><strong>Game:</strong> {{ selected_example.game_id }}  
+           <span class="pill">Play {{ selected_example.play_id }}</span>
+        </p>
+        <p><strong>Player:</strong> {{ selected_example.player_name }}
+           ({{ selected_example.player_position }})
+        </p>
+
+            <p>
+      <strong>Route Vector:</strong>
+      Δx = 
+      {% if selected_example.dx is not none and selected_example.dx == selected_example.dx %}
+        {{ "%.2f"|format(selected_example.dx) }}
+      {% else %}
+        N/A
+      {% endif %},
+      Δy = 
+      {% if selected_example.dy is not none and selected_example.dy == selected_example.dy %}
+        {{ "%.2f"|format(selected_example.dy) }}
+      {% else %}
+        N/A
+      {% endif %},
+      length = 
+      {% if selected_example.route_len is not none and selected_example.route_len == selected_example.route_len %}
+        {{ "%.2f"|format(selected_example.route_len) }} yds
+      {% else %}
+        N/A
+      {% endif %}
+    </p>
+
+    <p>
+      <strong>Coverage Context:</strong>
+      Nearest defender at 
+      {% if selected_example.nearest_defender is not none and selected_example.nearest_defender == selected_example.nearest_defender %}
+        {{ "%.2f"|format(selected_example.nearest_defender) }} yds
+      {% else %}
+        N/A
+      {% endif %};
+      distance to QB 
+      {% if selected_example.dist_to_qb is not none and selected_example.dist_to_qb == selected_example.dist_to_qb %}
+        {{ "%.2f"|format(selected_example.dist_to_qb) }} yds
+      {% else %}
+        N/A
+      {% endif %}
+    </p>
+
+        <div style="margin-top: 10px;">
+      <strong>Route Visualization:</strong>
+      {% if selected_example.dx is not none and selected_example.dx == selected_example.dx
+            and selected_example.dy is not none and selected_example.dy == selected_example.dy %}
+        {# Simple scaling: 4 px per yard #}
+        {% set scale = 4 %}
+        {% set center_x = 110 %}
+        {% set center_y = 70 %}
+        {% set end_x = center_x + (selected_example.dx * scale) %}
+        {% set end_y = center_y - (selected_example.dy * scale) %}
+
+        <svg width="220" height="140" viewBox="0 0 220 140" style="border-radius: 8px; margin-top: 6px;">
+          <!-- Field background -->
+          <rect x="10" y="10" width="200" height="120" fill="#065f46" stroke="#0f172a" stroke-width="1.5" />
+
+          <!-- Sidelines (horizontal) -->
+          <line x1="10" y1="10" x2="210" y2="10" stroke="#e5e7eb" stroke-width="1" />
+          <line x1="10" y1="130" x2="210" y2="130" stroke="#e5e7eb" stroke-width="1" />
+
+          <!-- End lines (vertical, end zone to end zone) -->
+          <line x1="10" y1="10" x2="10" y2="130" stroke="#e5e7eb" stroke-width="1" />
+          <line x1="210" y1="10" x2="210" y2="130" stroke="#e5e7eb" stroke-width="1" />
+
+          <!-- Center line (midfield between end zones) -->
+          <line x1="110" y1="10" x2="110" y2="130" stroke="#bbf7d0" stroke-width="1" stroke-dasharray="4 3" />
+
+          <!-- Hash marks-ish (just some visual yard lines) -->
+          {% for i in range(1, 5) %}
+            {% set x_hash = 10 + (i * 40) %}
+            <line x1="{{ x_hash }}" y1="10" x2="{{ x_hash }}" y2="12" stroke="#d1fae5" stroke-width="1" />
+            <line x1="{{ x_hash }}" y1="128" x2="{{ x_hash }}" y2="130" stroke="#d1fae5" stroke-width="1" />
+          {% endfor %}
+
+          <!-- Origin marker (approx. player start / LOS) -->
+          <circle cx="{{ center_x }}" cy="{{ center_y }}" r="3" fill="#facc15" stroke="#fef3c7" stroke-width="1" />
+
+          <!-- Arrow definition -->
+          <defs>
+            <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <polygon points="0 0, 6 3, 0 6" fill="#fbbf24" />
+            </marker>
+          </defs>
+
+          <!-- Route arrow: from origin (center) to scaled (dx, dy) -->
+          <line x1="{{ center_x }}" y1="{{ center_y }}"
+                x2="{{ end_x }}" y2="{{ end_y }}"
+                stroke="#fbbf24" stroke-width="2.5"
+                marker-end="url(#arrowhead)" />
+
+        </svg>
+        <div class="prob-subtext">
+          Arrow shows the player’s route relative to the field:<br>
+          horizontal axis = end zone to end zone, vertical axis = sideline to sideline.
+        </div>
+      {% else %}
+        <div class="prob-subtext">
+          Route visualization unavailable for this player (missing vector data).
+        </div>
+      {% endif %}
+    </div>
+
+
+        <div class="prob-value">
+          {{ "%.3f"|format(selected_example.target_prob) }}
+        </div>
+        <div class="prob-subtext">
+          Predicted probability that this player is the targeted receiver on this play.
+        </div>
+
+        <p>
+          <strong>Ground truth:</strong>
+          {% if selected_example.is_target is not none %}
+            {% if selected_example.is_target == 1 %}
+              <span class="badge badge-true">Actual Target</span>
+            {% else %}
+              <span class="badge badge-false">Not Target</span>
+            {% endif %}
+          {% else %}
+            <span>N/A (no label for this week)</span>
+          {% endif %}
+        </p>
+
+        <p>
+          <strong>Model top-1 prediction:</strong>
+          {% if selected_example.predicted_target %}
+            <span class="badge badge-true">This player is top-1 for this play</span>
+          {% else %}
+            <span class="badge badge-false">Another player is top-1 for this play</span>
+          {% endif %}
+        </p>
+      {% else %}
+        <p>Select an example on the left to see the model’s prediction and ranking for that player.</p>
+      {% endif %}
+    </div>
+    
+  </div>
+
+  <div class="card">
+    <h2>Top Players on This Play</h2>
+    {% if top_players and selected_example %}
+      <p>
+        Model ranking of offensive players for 
+        <strong>Game {{ selected_example.game_id }}, Play {{ selected_example.play_id }}</strong>
+        by predicted target probability.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Position</th>
+            <th>Predicted p(target)</th>
+            <th>Nearest Def (yds)</th>
+            <th>Route Len (yds)</th>
+            <th>Actual Target?</th>
+            <th>Model Chosen?</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for p in top_players %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ p.player_name }}</td>
+              <td>{{ p.player_position }}</td>
+              <td>{{ "%.3f"|format(p.target_prob) }}</td>
+
+              <td>
+                {% if p.nearest_defender is not none and p.nearest_defender == p.nearest_defender %}
+                  {{ "%.2f"|format(p.nearest_defender) }}
+                {% else %}
+                  N/A
+                {% endif %}
+              </td>
+
+              <td>
+                {% if p.route_len is not none and p.route_len == p.route_len %}
+                  {{ "%.2f"|format(p.route_len) }}
+                {% else %}
+                  N/A
+                {% endif %}
+              </td>
+
+              <td>
+                {% if p.is_target is not none %}
+                  {% if p.is_target == 1 %}
+                    <span class="badge badge-true">Yes</span>
+                  {% else %}
+                    <span class="badge badge-false">No</span>
+                  {% endif %}
+                {% else %}
+                  N/A
+                {% endif %}
+              </td>
+              <td>
+                {% if p.predicted_target %}
+                  <span class="badge badge-true">Top-1</span>
+                {% else %}
+                  &mdash;
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+    {% elif selected_example %}
+      <p>No per-play ranking available for this example. Check prediction data.</p>
+    {% else %}
+      <p>Select an example player above to see per-play rankings.</p>
+    {% endif %}
+  </div>
+
+</main>
+
+<footer>
+  Logistic Regression Target Model • Built on tracking-like data, offense vectors, and per-play evaluation.
+</footer>
+
+</body>
+</html>

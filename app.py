@@ -5,6 +5,8 @@ from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 from dash.dash_table import DataTable
 from app_functions import build_model, fit_elastic_net, get_elasticnet_coefficients
+from flask import Flask, render_template, request, url_for
+
 
 # Load data
 data = pd.read_csv("input_data_clean.csv")
@@ -67,7 +69,8 @@ app.layout = html.Div([
         ]),
 
         dcc.Tab(label='Logistic Regression', children=[
-            html.H2('Logistic Regression')
+            html.H2('Logistic Regression'),
+            html.A("Go to Logistic Regression Model Page", href="/log_reg")
         ]),
 
         dcc.Tab(label='KNN (K-Nearest Neighbor)', children=[
@@ -133,7 +136,12 @@ def update_linear_regression(alpha, l1_ratio, test_size):
         #fig
     )
 
+@server.route("/log_reg", methods=["GET", "POST"])
+def log_reg():
+    return render_template("log_reg.html")
+
+
 # Run app
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8050))
-    app.run_server(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
