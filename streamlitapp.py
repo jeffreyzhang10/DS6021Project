@@ -12,6 +12,11 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LinearRegression
 
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from umap import UMAP
+import umap.umap_ as umap
+
 
 data = pd.read_csv("input_data_clean.csv")
 
@@ -251,4 +256,54 @@ with tab7:
 
 with tab8:
     st.header("External Models (TSNE, UMAP)")
-    st.write("Add models here.")
+
+    st.write("Analogy: t-SNE & UMAP are to to PCA as non-linear methods like Random Forest are to Linear Regression")
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    with col1:
+        st.image("pcacomp.png", caption="PCA")
+
+    with col2:
+        st.image("umap-comp.png", caption="UMAP")
+
+    with col3:
+        st.image("t-snecomp.png", caption="T-SNE")
+
+    st.header("Hyperparameter Tuning for UMAP (n_neighbors, min_dist)")
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    with col1:
+        st.image("umap50.png", caption="UMAP with n_neighbors = 5, min_dist = 0")
+
+    with col2:
+        st.image("umap150.png", caption="UMAP with n_neighbors = 15, min_dist = 0")
+
+    with col3:
+        st.image("umap500.png", caption="UMAP with n_neighbors = 50, min_dist = 0")
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    with col1:
+        st.image("umap5.5.png", caption="UMAP with n_neighbors = 5, min_dist = 0.5")
+
+    with col2:
+        st.image("umap15.5.png", caption="UMAP with n_neighbors = 15, min_dist = 0.5")
+
+    with col3:
+        st.image("umap50.5.png", caption="UMAP with n_neighbors = 50, min_dist = 0.5")
+
+
+    st.header("Hyperparameter Tuning for t-SNE (perplexity)")
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+
+    with col1:
+        st.image("tsne5.png", caption="t-SNE with Perplexity = 5")
+
+    with col2:
+        st.image("tsne30.png", caption="t-SNE with Perplexity = 30")
+
+    with col3:
+        st.image("tsne50.png", caption="t-SNE with Perplexity = 50")
