@@ -49,8 +49,8 @@ def fit_elastic_net(input_data, target, alpha=0.1, l1_ratio=0.5, test_size=0.2):
     
     # Train/test split based on test size 
     X_train, X_test, y_train, y_test = train_test_split(
-        # Split x, y, stratify y, input test_size parameter
-        X, y, stratify=y, test_size=test_size, random_state=22903
+        # Split x, y, input test_size parameter
+        X, y, test_size=test_size, random_state=22903
     )
     
     # Set model preprocessing with standard scaler and one hot encoder for numerical and categorical features
