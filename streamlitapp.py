@@ -9,10 +9,11 @@ data = pd.read_csv("input_data_clean.csv")
 st.set_page_config(page_title="DS6021 Final Project", layout="wide")
 
 # tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Title",
     "Data Table",
-    "Data Analysis / EDA / KMeans",
+    "Data Analysis / EDA",
+    "PCA / KMeans / PCR",
     "Linear Regression",
     "Logistic Regression",
     "KNN",
@@ -31,11 +32,22 @@ with tab2:
 
 # eda
 with tab3:
-    st.header("Data Analysis / EDA / KMeans")
+    st.header("Data Analysis / EDA")
     st.write("Add your EDA visualizations here.")
 
-
 with tab4:
+    st.header("PCA / KMeans / PCR")
+
+    st.subheader("Original PCA / K-Means Plot With 8 Clusters")
+    st.write("Given the complexity of play types and formations in football, we initially chose 8 clusters in an attempt to shape our data into defined groups that were part of different styles. ")
+    st.image("kmeans8.png", caption="K-Means with 8 Clusters (Initial)")
+
+    st.subheader("PCA / K-Means Plot With 4 Clusters")
+    st.write("Based on the elbow and silhouette methods, our group determined that 4 clusters was the most appropriate number, which can be shown below.")
+    st.image("kmeans4.png", caption="K-Means with 8 Clusters (Initial)")
+
+
+with tab5:
     st.header("Linear Regression (Elastic Net)")
 
     # sliders
@@ -67,14 +79,14 @@ with tab4:
         st.dataframe(coef_y.style.format({"coefficient": "{:.4f}"}))
 
 
-with tab5:
+with tab6:
     st.header("Logistic Regression")
     st.write("Add logistic regression functions here.")
 
-with tab6:
+with tab7:
     st.header("KNN")
     st.write("Add KNN modeling here.")
 
-with tab7:
+with tab8:
     st.header("External Models (TSNE, UMAP)")
     st.write("Add models here.")
