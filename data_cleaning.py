@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from data_loader import load_weekly_data
 
-input_data, output_data = load_weekly_data()
+input_data = load_weekly_data()
 # Clean tracking data
 # Clean orientation and direction
 input_data["o_clean"] = (-(input_data["o"] - 90)) % 360
@@ -15,7 +15,7 @@ input_data["x_clean"] = np.where(
           "x"
       ], 
   )
-# y, s, a alreday clean
+# y, s, a already clean
 input_data["y_clean"] = input_data["y"]
 input_data["s_clean"] = input_data["s"]
 input_data["a_clean"] = input_data["a"]
