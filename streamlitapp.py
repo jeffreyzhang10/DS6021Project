@@ -342,9 +342,52 @@ with tab7:
             acc = accuracy_score(y_test, y_pred)
             bal_acc = balanced_accuracy_score(y_test, y_pred)
 
+            st.session_state["pipe2"] = pipe2
+
         st.subheader("Results")
         st.write(f"**Accuracy:** {acc:.3f}") # Print accuracy score
         st.write(f"**Balanced Accuracy:** {bal_acc:.3f}") # Print balanced accuracy score
+
+    st.subheader("Adjust the sliders to simulate a new play.")
+
+    new_play = {}
+
+    new_play["distance_qb_wr"] = st.slider(
+            "QB to Receiver Distance (yards)",
+            0.0, 55.0, 15.0, step=1.0
+        )
+
+    new_play["orientation_diff"] = st.slider(
+            "Orientation Difference (degrees)",
+            0.0, 360.0, 120.0, step=5.0
+        )
+
+    new_play["dropback_distance"] = st.slider(
+            "QB Dropback Distance",
+            0.0, 12.0, 3.0, step=1.0
+        )
+
+    new_play["wr_speed"] = st.slider(
+            "Wide Receiver Speed (yards per second)",
+            0.0, 10.0, 5.0, step=1.0
+        )
+
+    new_play["wr_accel"] = st.slider(
+            "Wide Receiver Acceleration (yards per second^2)",
+            0.0, 8.0, 3.0, step=1.0
+        )
+        
+    new_play_df = pd.DataFrame([new_play])
+
+    if st.button("Predict Completion"):
+        if "pipe2" not in st.session_state:
+            st.error("Run KNN models first")
+        else:
+            model = st.session_state["pipe2"]
+            prediction = model.predict(new_play_df)
+            label_map = {0: "Incomplete", 1: "Complete"}
+            pred_label = label_map[int(prediction[0])]
+            st.write(f"Predicted pass result: **{pred_label}**")
 
 with tab8:
     st.header("External Models (TSNE, UMAP)")
