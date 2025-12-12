@@ -20,12 +20,11 @@ import umap.umap_ as umap
 
 data = pd.read_csv("input_data_clean.csv")
 
-
 st.set_page_config(page_title="DS6021 Final Project", layout="wide")
 
 # tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-    "Title",
+    "Introduction",
     "Data Table",
     "Data Analysis / EDA",
     "PCA / KMeans / PCR",
@@ -130,7 +129,28 @@ with tab2:
 # eda
 with tab3:
     st.header("Data Analysis / EDA")
-    st.write("Add your EDA visualizations here.")
+    st.write("Before doing any significant data analysis for modeling, our group felt it was import to conduct some exploratory data analysis to not only get a better feel for the information at hand, but understand the underlying distributions of the data set in order to guide our decision making going forward. ")
+
+    st.subheader("Side-by-Side Histogram of Player Speed vs. Acceleration")
+    st.image("edahistogram.png", caption="Histogram of Player Speed and Player Acceleration")
+
+    st.write('From the plots above, we can immediately see a right-skewed distribution in both speed and acceleration, which indicates that most plays that occur rely on players standing still or moving moderately slowly, relatively speaking. ')
+    st.write('This makes sense intuitively, as the data also reflects how often players stop and start moving again, which we can attribute to factors like changes in direction or acceleration.')
+
+    st.subheader("Understanding Acceleration and Speed by Player Position")
+
+    st.write('Building upon this, we wanted to see how the data reflected changes in position, such as skill players compared to linemen.')
+    st.image("boxploteda.png", caption="Boxplot of Player Speed and Acceleration by Position")
+
+    st.write('The boxplots clearly reflect our initial hypothesis from above, where positions like wide receivers and running backs are just faster in terms of speed and acceleration relative to those like nose and defensive tackles.')
+
+    st.write('But perhaps most importantly, to be able to make any predictions on a play-by-play basis, we need to understand visually how players move, on a graph, beyond just how we see them run on the television in front of us')
+    st.image('edavelocityvectors.png', caption = 'Example Velocity Vector Distribution Snapchat At A Specific Play/Frame')
+
+    st.write('The length and magnitude of the arrows above only reinforce how dependent motion is on factors like position and role. Looking at arrows, which represent the movements of players on both side of the ball, there are equal and opposite reactions from the players, likely based on pre-snap movement indicated by the offense and matched by the defense.')
+
+    st.write('Overall, this EDA helped our group especially in understanding how the spatial data reflected on a visual level. From here on out, we were able to use the data to begin constructing models based on the insights already gleaned, and highlight how important visualizations can be in helping us understand this seemingly complex arrangement of numbers. ')
+
 
 with tab4:
 
