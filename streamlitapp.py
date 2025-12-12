@@ -19,7 +19,7 @@ import umap.umap_ as umap
 
 from sklearn.metrics import accuracy_score, balanced_accuracy_score
 from sklearn.neighbors import KNeighborsClassifier
-
+from target_model_copy import train_and_evaluate, evaluate_week_with_model
 
 data = pd.read_csv("input_data_clean.csv")
 
@@ -286,7 +286,22 @@ with tab5:
 
 with tab6:
     st.header("Logistic Regression")
-    st.write("Add logistic regression functions here.")
+
+    if st.button("Run Logistic Regression"):
+        model, off_df, play_stats = train_and_evaluate(data)
+    
+        train_metrics = {
+            #"dataset": f"week_{base_week:02d}",
+            "split_type": "train_split",
+            "top1_accuracy": float(play_stats["top1_correct"].mean()),
+            "mean_true_prob": float(play_stats["true_target_prob"].mean()),
+            "mean_pos_log_loss": float(play_stats["pos_log_loss"].mean())
+        }
+        
+        st.subheader("Training Performance Metrics")
+        st.write(f"**Top-1 Accuracy:** {train_metrics['top1_accuracy']:.4f}")
+        st.write(f"**Mean True Target Probability:** {train_metrics['mean_true_prob']:.4f}")
+        st.write(f"**Mean Positive Log-Loss:** {train_metrics['mean_pos_log_loss']:.4f}")        
 
 with tab7:
     st.header("KNN")
