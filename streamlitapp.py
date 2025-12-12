@@ -17,6 +17,9 @@ from sklearn.manifold import TSNE
 from umap import UMAP
 import umap.umap_ as umap
 
+from sklearn.metrics import accuracy_score, balanced_accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+
 
 data = pd.read_csv("input_data_clean.csv")
 
@@ -290,8 +293,58 @@ with tab7:
     
     # sliders
     alpha = st.slider("Test Size (percent)", 0.1, 0.5, 0.25, step=0.05)
-    k = st.slider("Number of Neighbors (k)", 1, 10, 3, step=2)
+    chosen_k = st.slider("Number of Neighbors (k)", 1, 41, 23, step=2)
     folds = st.slider("Cross-Validation folds", 3, 10, 5, step=1)
+
+    if st.button("Run KNN Models"):
+        with st.spinner("Fitting KNN models..."):
+            model_df = pd.read_csv("knn.csv")
+
+            y = model_df["pass_completed"]
+
+            X = model_df[[
+            "distance_qb_wr",
+            "orientation_diff",
+            "dropback_distance",
+            "wr_speed",
+            "wr_accel"
+            ]]
+
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=alpha, random_state=42, stratify=y)
+
+            pipe = Pipeline([
+                ("scaler", StandardScaler()),
+                ("knn", KNeighborsClassifier(weights="distance"))
+            ])
+
+            param_grid = {"knn__n_neighbors": range(1, 41, 2)}
+
+            grid = GridSearchCV(pipe, param_grid, cv=folds, scoring="balanced_accuracy", n_jobs=-1)
+            grid.fit(X_train, y_train)
+
+            results_df = pd.DataFrame(grid.cv_results_)
+
+            results_df["k"] = results_df["param_knn__n_neighbors"]
+            results_df["mean_score"] = results_df["mean_test_score"]
+
+            best_k = grid.best_params_["knn__n_neighbors"]
+            best_score = grid.best_score_
+
+            pipe2 = Pipeline([
+                ("scaler", StandardScaler()),
+                ("knn", KNeighborsClassifier(n_neighbors=chosen_k,
+                weights="distance"))
+            ])
+
+            pipe2.fit(X_train, y_train)
+            y_pred = pipe2.predict(X_test)
+
+            acc = accuracy_score(y_test, y_pred)
+            bal_acc = balanced_accuracy_score(y_test, y_pred)
+
+        st.subheader("Results")
+        st.write(f"**Accuracy:** {acc:.3f}")
+        st.write(f"**Balanced Accuracy:** {bal_acc:.3f}")
 
 with tab8:
     st.header("External Models (TSNE, UMAP)")

@@ -22,4 +22,4 @@ def load_weekly_data(weeks=range(1, 19)): # For weeks 1-18
 
     return input_data
 def load_supplementary():
-    return pd.read_csv("supplementary_data.csv", low_memory=False)
+    return pd.read_csv("train/supplementary_data.csv", low_memory=False)
