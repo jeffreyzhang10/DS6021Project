@@ -93,6 +93,7 @@ def make_examples(pred_df: pd.DataFrame, n_examples: int = 20):
         "nearest_defender",
         "dist_to_qb",
         "num_defenders_within_2",
+        "play_direction",
     ]
     cols = [c for c in cols if c in pred_df.columns]
 
@@ -124,6 +125,7 @@ def make_examples(pred_df: pd.DataFrame, n_examples: int = 20):
                 "route_len": float(row.get("route_len", np.nan)),
                 "nearest_defender": float(row.get("nearest_defender", np.nan)),
                 "dist_to_qb": float(row.get("dist_to_qb", np.nan)),
+                "play_direction": (row.get("play_direction", None))
             })
 
 
@@ -165,7 +167,7 @@ def get_top_players_for_play(game_id: str, play_id: str, top_k: int = 5):
     cols = [c for c in cols if c in sub.columns]
     sub = sub[cols]
 
-    # 🔥 THE IMPORTANT LINE: sort by target probability (descending)
+    # sort by target probability (descending)
     sub = sub.sort_values("target_prob", ascending=False)
 
     # Take only the top K rows

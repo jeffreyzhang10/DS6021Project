@@ -282,66 +282,110 @@
       {% endif %}
     </p>
 
-        <div style="margin-top: 10px;">
-      <strong>Route Visualization:</strong>
-      {% if selected_example.dx is not none and selected_example.dx == selected_example.dx
-            and selected_example.dy is not none and selected_example.dy == selected_example.dy %}
-        {# Simple scaling: 4 px per yard #}
-        {% set scale = 4 %}
-        {% set center_x = 110 %}
-        {% set center_y = 70 %}
-        {% set end_x = center_x + (selected_example.dx * scale) %}
-        {% set end_y = center_y - (selected_example.dy * scale) %}
+       <div style="margin-top: 10px;">
+  <strong>Route Visualization:</strong>
+  {% if selected_example.dx is not none and selected_example.dx == selected_example.dx
+        and selected_example.dy is not none and selected_example.dy == selected_example.dy %}
+    {# scaling: yards -> pixels #}
+    {% set scale = 4 %}
+    {% set center_x = 110 %}
+    {% set center_y = 70 %}
+    {% set end_x = center_x + (selected_example.dx * scale) %}
+    {% set end_y = center_y - (selected_example.dy * scale) %}
 
-        <svg width="220" height="140" viewBox="0 0 220 140" style="border-radius: 8px; margin-top: 6px;">
-          <!-- Field background -->
-          <rect x="10" y="10" width="200" height="120" fill="#065f46" stroke="#0f172a" stroke-width="1.5" />
+    {# offense direction from play_direction #}
+    {% set play_dir = (selected_example.play_direction or '') | lower %}
+    {% set offense_left = (play_dir == 'left') %}
 
-          <!-- Sidelines (horizontal) -->
-          <line x1="10" y1="10" x2="210" y2="10" stroke="#e5e7eb" stroke-width="1" />
-          <line x1="10" y1="130" x2="210" y2="130" stroke="#e5e7eb" stroke-width="1" />
+    <svg width="220" height="140" viewBox="0 0 220 140" style="border-radius: 8px; margin-top: 6px;">
+      <!-- Field background -->
+      <rect x="10" y="10" width="200" height="120" fill="#065f46" stroke="#0f172a" stroke-width="1.5" />
 
-          <!-- End lines (vertical, end zone to end zone) -->
-          <line x1="10" y1="10" x2="10" y2="130" stroke="#e5e7eb" stroke-width="1" />
-          <line x1="210" y1="10" x2="210" y2="130" stroke="#e5e7eb" stroke-width="1" />
+      <!-- Sidelines -->
+      <line x1="10" y1="10" x2="210" y2="10" stroke="#e5e7eb" stroke-width="1" />
+      <line x1="10" y1="130" x2="210" y2="130" stroke="#e5e7eb" stroke-width="1" />
 
-          <!-- Center line (midfield between end zones) -->
-          <line x1="110" y1="10" x2="110" y2="130" stroke="#bbf7d0" stroke-width="1" stroke-dasharray="4 3" />
+      <!-- End lines -->
+      <line x1="10" y1="10" x2="10" y2="130" stroke="#e5e7eb" stroke-width="1" />
+      <line x1="210" y1="10" x2="210" y2="130" stroke="#e5e7eb" stroke-width="1" />
 
-          <!-- Hash marks-ish (just some visual yard lines) -->
-          {% for i in range(1, 5) %}
-            {% set x_hash = 10 + (i * 40) %}
-            <line x1="{{ x_hash }}" y1="10" x2="{{ x_hash }}" y2="12" stroke="#d1fae5" stroke-width="1" />
-            <line x1="{{ x_hash }}" y1="128" x2="{{ x_hash }}" y2="130" stroke="#d1fae5" stroke-width="1" />
-          {% endfor %}
+      <!-- Midfield line -->
+      <line x1="110" y1="10" x2="110" y2="130" stroke="#bbf7d0" stroke-width="1" stroke-dasharray="4 3" />
 
-          <!-- Origin marker (approx. player start / LOS) -->
-          <circle cx="{{ center_x }}" cy="{{ center_y }}" r="3" fill="#facc15" stroke="#fef3c7" stroke-width="1" />
+      <!-- Hash-like ticks -->
+      {% for i in range(1, 5) %}
+        {% set x_hash = 10 + (i * 40) %}
+        <line x1="{{ x_hash }}" y1="10" x2="{{ x_hash }}" y2="12" stroke="#d1fae5" stroke-width="1" />
+        <line x1="{{ x_hash }}" y1="128" x2="{{ x_hash }}" y2="130" stroke="#d1fae5" stroke-width="1" />
+      {% endfor %}
 
-          <!-- Arrow definition -->
-          <defs>
+      <!-- Origin: player start -->
+      <circle cx="{{ center_x }}" cy="{{ center_y }}" r="3" fill="#facc15" stroke="#fef3c7" stroke-width="1" />
+
+      <!-- Arrow defs -->
+      <defs>
+        <!-- route arrow -->
+        <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <polygon points="0 0, 6 3, 0 6" fill="#fbbf24" />
+        </marker>
+        <!-- offense direction arrowheads -->
+            <defs>
+            <!-- Route arrowhead (unchanged) -->
             <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-              <polygon points="0 0, 6 3, 0 6" fill="#fbbf24" />
+                <polygon points="0 0, 6 3, 0 6" fill="#fbbf24" />
             </marker>
-          </defs>
 
-          <!-- Route arrow: from origin (center) to scaled (dx, dy) -->
-          <line x1="{{ center_x }}" y1="{{ center_y }}"
-                x2="{{ end_x }}" y2="{{ end_y }}"
-                stroke="#fbbf24" stroke-width="2.5"
-                marker-end="url(#arrowhead)" />
+            <!-- 🔽 Single offense-direction arrowhead -->
+            <marker id="off_arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <polygon points="0 0, 7 3.5, 0 7" fill="#bfdbfe" />
+            </marker>
+            </defs>
 
-        </svg>
-        <div class="prob-subtext">
-          Arrow shows the player’s route relative to the field:<br>
-          horizontal axis = end zone to end zone, vertical axis = sideline to sideline.
-        </div>
-      {% else %}
-        <div class="prob-subtext">
-          Route visualization unavailable for this player (missing vector data).
-        </div>
-      {% endif %}
+      </defs>
+
+      <!-- Offense direction banner -->
+      <!-- Offense direction banner -->
+        {% if offense_left %}
+        <!-- Offense going LEFT: draw line from right → left -->
+        <line x1="190" y1="18" x2="30" y2="18"
+                stroke="#bfdbfe" stroke-width="2"
+                marker-end="url(#off_arrow)" />
+        <text x="110" y="16" text-anchor="middle" font-size="10" fill="#e5e7eb">
+            Offense → Left
+        </text>
+        {% elif play_dir == 'right' %}
+        <!-- Offense going RIGHT: draw line from left → right -->
+        <line x1="30" y1="18" x2="190" y2="18"
+                stroke="#bfdbfe" stroke-width="2"
+                marker-end="url(#off_arrow)" />
+        <text x="110" y="16" text-anchor="middle" font-size="10" fill="#e5e7eb">
+            Offense → Right
+        </text>
+        {% else %}
+        <text x="110" y="16" text-anchor="middle" font-size="10" fill="#e5e7eb">
+            Offense direction N/A
+        </text>
+        {% endif %}
+
+
+      <!-- Route arrow -->
+      <line x1="{{ center_x }}" y1="{{ center_y }}"
+            x2="{{ end_x }}" y2="{{ end_y }}"
+            stroke="#fbbf24" stroke-width="2.5"
+            marker-end="url(#arrowhead)" />
+    </svg>
+
+    <div class="prob-subtext">
+      Arrow shows the player's route from their starting point. Blue banner shows which end zone
+      the offense is driving toward (left or right). Horizontal axis = end zone to end zone, vertical axis = sideline to sideline.
     </div>
+  {% else %}
+    <div class="prob-subtext">
+      Route visualization unavailable for this player (missing vector data).
+    </div>
+  {% endif %}
+</div>
+
 
 
         <div class="prob-value">
