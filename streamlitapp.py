@@ -30,24 +30,26 @@ st.image("banner.jpg", width='stretch')
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Introduction",
     "Data Table",
-    "Data Analysis / EDA",
+    "EDA",
     "PCA / KMeans / PCR",
     "Linear Regression",
     "Logistic Regression",
     "KNN",
-    "External Models"
+    "Additional Models"
 ])
 
 
 with tab1:
-    st.title("DS6021 Final Project")
+    st.title("DS6021 Final Project - Group 16")
     st.write("Emmett Hannam, Jarrett Markman, Weston Williams, Jeffrey Zhang")
+
+    st.write('Data Source Link: https://www.kaggle.com/competitions/nfl-big-data-bowl-2026-prediction/data')
 
     st.write('This project looks to use data from the **NFL Big Data Bowl 2026** competition on Kaggle to predict player movements on a play-by-play basis. ical movement patterns. Throughout the project, we will conduct exploratory data analysis, as well as use various machine learning techniques to gauge any interpretable insights and evalutate the performance of our chosen models.')
 
-    st.write('Our Team Goals: Team Goals: Identifying play type, player location, intended player target, predicting pass completion')
+    st.write('Team Goals: Identifying play type, player location, intended player target, predicting pass completion')
 
-    st.write('Research Question: Can we use various machine learning methods to accurately classify play type and the intended receiver, and predict player field location and probability of pass completion?')
+    st.write('Research Question: Can we use machine learning methods to accurately classify play type and the intended receiver? Could we also use other methods to predict player field location and probability of pass completion? ')
 
     st.write('Methods Explored: EDA, PCA, K-Means, PCR, Linear Regression, Logistic Regression, KNN, t-SNE, & UMAP')
 
