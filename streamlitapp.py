@@ -298,6 +298,7 @@ with tab6:
         "dist_to_qb": -0.19653964181732517,
         "nearest_defender_dist": 0.10651670100892234,
         "vel_toward_qb": 0.06956957997670585,
+        "dl_closing": -0.6 
     }
     INTERCEPT = 0.0   # unknown; ranking is unaffected
 
@@ -322,8 +323,9 @@ with tab6:
         df["player_side"] = df["player_side"].astype(str).str.upper().str.strip()
         df["position"] = df["position"].astype(str).str.upper().str.strip()
         df["player_name"] = df["player_name"].astype(str)
-        for c in ["x_mid", "y_mid", "s_mid", "dir_mid"]:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
+        for c in ["x_mid","y_mid","s_mid","dir_mid","x_start","y_start","dx_mid_end","dy_mid_end"]:
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
         df["game_id"] = df["game_id"].astype(int)
         df["play_id"] = df["play_id"].astype(int)
         df["nfl_id"] = df["nfl_id"].astype(int)
@@ -334,11 +336,13 @@ with tab6:
         dfn = df_play[df_play["player_side"] == "DEFENSE"].copy()
 
         num_defenders_observed = int(dfn["nfl_id"].nunique())
-        dl_closing = 11 - num_defenders_observed
+        dl_closing = max(0, min(6, 11 - num_defenders_observed))
+        off["dl_closing"] = dl_closing
+
+
 
         # attach as play-level feature to every offensive row
         off["dl_closing"] = dl_closing
-        COEF["dl_closing"] = -0.6   # start here
 
 
         qb = off[off["position"] == "QB"]
@@ -347,6 +351,11 @@ with tab6:
 
         qb_row = qb.iloc[0]
         qb_x, qb_y = float(qb_row["x_mid"]), float(qb_row["y_mid"])
+
+        qb_dir = float(qb_row["dir_mid"]) if not pd.isna(qb_row["dir_mid"]) else 0.0
+        off["qb_dir"] = qb_dir
+        off["qb_x"] = qb_x
+        off["qb_y"] = qb_y
 
         # eligible offense only (non-QB)
         off = off[off["position"] != "QB"].copy()
@@ -411,7 +420,7 @@ with tab6:
         off["qb_y"] = qb_y
         return off
 
-    def score_player_row(position: str, dist_to_qb: float, nearest_def: float | None, vel_toward_qb: int, dl_closing: float) -> float:
+    def score_player_row(position: str, dist_to_qb: float, nearest_def: float | None, vel_toward_qb: int, dl_closing: int) -> float:
         z = INTERCEPT
         if position == "WR":
             z += COEF["position_WR"]
@@ -449,11 +458,19 @@ with tab6:
                 "y_mid": float(r["y_mid"]),
                 "qb_x": float(r["qb_x"]),
                 "qb_y": float(r["qb_y"]),
+                "x_start": float(r["x_start"]) if "x_start" in off_feat.columns and not pd.isna(r["x_start"]) else float(r["x_mid"]),
+                "y_start": float(r["y_start"]) if "y_start" in off_feat.columns and not pd.isna(r["y_start"]) else float(r["y_mid"]),
+                "x_end": float(r["x_mid"] + r["dx_mid_end"]) if "dx_mid_end" in off_feat.columns and not pd.isna(r["dx_mid_end"]) else float(r["x_mid"]),
+                "y_end": float(r["y_mid"] + r["dy_mid_end"]) if "dy_mid_end" in off_feat.columns and not pd.isna(r["dy_mid_end"]) else float(r["y_mid"]),
+                "qb_dir": float(r["qb_dir"]),
+                "dir_mid": float(r["dir_mid"]) if "dir_mid" in off_feat.columns and not pd.isna(r["dir_mid"]) else 0.0,
+                "s_mid": float(r["s_mid"]) if "s_mid" in off_feat.columns and not pd.isna(r["s_mid"]) else 0.0,
+
             })
         rows.sort(key=lambda x: x["p_target"], reverse=True)
         return rows[:TOPK]
 
-    def make_defenders_for_html(df_play: pd.DataFrame, qb_x: float, qb_y: float) -> list[dict]:
+    def make_defenders_for_html(df_play: pd.DataFrame, qb_x: float, qb_y: float, qb_dir: float) -> list[dict]:
         dfn = df_play[df_play["player_side"] == "DEFENSE"].copy()
         out = []
         for _, r in dfn.iterrows():
@@ -468,6 +485,13 @@ with tab6:
                 "y_mid": float(r["y_mid"]),
                 "qb_x": float(qb_x),
                 "qb_y": float(qb_y),
+                "x_start": float(r["x_start"]) if "x_start" in df_play.columns and not pd.isna(r["x_start"]) else float(r["x_mid"]),
+                "y_start": float(r["y_start"]) if "y_start" in df_play.columns and not pd.isna(r["y_start"]) else float(r["y_mid"]),
+                "x_end": float(r["x_mid"] + r["dx_mid_end"]) if "dx_mid_end" in df_play.columns and not pd.isna(r["dx_mid_end"]) else float(r["x_mid"]),
+                "y_end": float(r["y_mid"] + r["dy_mid_end"]) if "dy_mid_end" in df_play.columns and not pd.isna(r["dy_mid_end"]) else float(r["y_mid"]),
+                "qb_dir": float(qb_dir),   # pass qb_dir into the function, or compute it from off_feat once
+                "dir_mid": float(r["dir_mid"]) if "dir_mid" in df_play.columns and not pd.isna(r["dir_mid"]) else 0.0,
+                "s_mid": float(r["s_mid"]) if "s_mid" in df_play.columns and not pd.isna(r["s_mid"]) else 0.0,
             })
         return out
 
@@ -506,12 +530,13 @@ with tab6:
     rows = make_rows_for_html(off_feat)
     pred = rows[0] if rows else None
 
+    qb_dir = float(off_feat["qb_dir"].iloc[0])
     qb_x = float(off_feat["qb_x"].iloc[0])
     qb_y = float(off_feat["qb_y"].iloc[0])
 
     rows = make_rows_for_html(off_feat)
     pred = rows[0] if rows else None
-    defenders = make_defenders_for_html(df_play, qb_x, qb_y)
+    defenders = make_defenders_for_html(df_play, qb_x, qb_y, qb_dir)
 
     payload = {
         "game_id": int(game_id),

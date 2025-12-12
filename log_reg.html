@@ -101,6 +101,12 @@
     color: #111 !important;
     font-weight: 700;
   }
+
+  .traj { stroke-width: 2; opacity: 0.85; }
+  .offTraj { stroke:#1f77b4; stroke-width:2; opacity:0.9; }
+  .defTraj { stroke:#d62728; stroke-width:2; opacity:0.9; }
+  #arrow path { fill: #111; }   /* arrowhead color (simple default) */
+
 </style>
 
 </head>
@@ -131,6 +137,16 @@
 <div id="plays"></div>
 
 <script>
+
+function deg2rad(d){ return d * Math.PI / 180; }
+
+// rotate point (x,y) by angle radians around origin
+function rot(x, y, ang){
+  const c = Math.cos(ang), s = Math.sin(ang);
+  return [x*c - y*s, x*s + y*c];
+}
+
+
 function esc(s){ return (s ?? "").toString()
   .replaceAll("&","&amp;")
   .replaceAll("<","&lt;")
@@ -139,40 +155,86 @@ function esc(s){ return (s ?? "").toString()
 
 function svgForPlay(offRows, defRows){
   const qb = offRows[0];
-  if (qb.qb_x == null || qb.qb_y == null) {
-    return `<div class="note">QB position missing for this play.</div>`;
-  }
+  if (qb.qb_x == null || qb.qb_y == null) return `<div class="note">QB missing.</div>`;
+
+  const ang = -deg2rad(qb.qb_dir || 0);  // rotate world so QB faces right
 
   const all = [...offRows, ...(defRows || [])];
 
-  const rx = all.map(r => r.x_mid - r.qb_x);
-  const ry = all.map(r => r.y_mid - r.qb_y);
+  // rotated, QB-relative positions for bounds
+  const pts = all.map(r => {
+    const dx = r.x_mid - r.qb_x;
+    const dy = r.y_mid - r.qb_y;
+    const [xr, yr] = rot(dx, dy, ang);
+    return { xr, yr };
+  });
 
-  const xmin = Math.min(0, ...rx) - 3;
-  const xmax = Math.max(0, ...rx) + 3;
-  const ymin = Math.min(0, ...ry) - 3;
-  const ymax = Math.max(0, ...ry) + 3;
+  const xs = pts.map(p => p.xr);
+  const ys = pts.map(p => p.yr);
+
+  const xmin = Math.min(0, ...xs) - 3;
+  const xmax = Math.max(0, ...xs) + 3;
+  const ymin = Math.min(0, ...ys) - 3;
+  const ymax = Math.max(0, ...ys) + 3;
 
   const W=520, H=280;
   const mapx = x => (x - xmin)/(xmax-xmin)*W;
   const mapy = y => (1-(y-ymin)/(ymax-ymin))*H;
 
-  let s = `<circle class="qb" cx="${mapx(0)}" cy="${mapy(0)}" r="6"></circle>
-           <text x="${mapx(0)+8}" y="${mapy(0)-8}">QB</text>`;
+    const defs = `
+      <defs>
+        <marker id="arrowOff" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#1f77b4"></path>
+        </marker>
+        <marker id="arrowDef" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#d62728"></path>
+        </marker>
+      </defs>`;
 
-  // defenders (squares)
+
+    let s = defs;
+
+  // QB at origin
+  s += `<circle class="qb" cx="${mapx(0)}" cy="${mapy(0)}" r="6"></circle>
+        <text x="${mapx(0)+8}" y="${mapy(0)-8}">QB</text>`;
+
+  const SPEED_SCALE = 2.0;  // tune this (yards -> pixels via map)
+  const MAX_ARROW_YARDS = 8.0;
+
+  function drawArrow(r, isDefense){
+    // rotated QB-relative position (start)
+    const [xr, yr] = rot(r.x_mid - r.qb_x, r.y_mid - r.qb_y, ang);
+    const x1 = mapx(xr), y1 = mapy(yr);
+
+    // direction in QB-facing frame
+    const relDir = deg2rad((r.dir_mid || 0) - (qb.qb_dir || 0));
+    let L = Math.min(MAX_ARROW_YARDS, SPEED_SCALE * (r.s_mid || 0));  // length in "yards" frame
+    const x2 = mapx(xr + L * Math.cos(relDir));
+    const y2 = mapy(yr + L * Math.sin(relDir));
+
+    const cls = isDefense ? "defTraj" : "offTraj";
+    const marker = isDefense ? "url(#arrowDef)" : "url(#arrowOff)";
+    s += `<line class="${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="${marker}"></line>`;
+  }
+
+  // defenders arrows
+  (defRows || []).forEach(d => drawArrow(d, true));
+  // offense arrows
+  offRows.forEach(r => drawArrow(r, false));
+
+    // defenders squares
   (defRows || []).forEach(d => {
-    const x = mapx(d.x_mid - d.qb_x);
-    const y = mapy(d.y_mid - d.qb_y);
+    const [xr, yr] = rot(d.x_mid - d.qb_x, d.y_mid - d.qb_y, ang);
+    const x = mapx(xr), y = mapy(yr);
     s += `<rect class="def" x="${x-4}" y="${y-4}" width="8" height="8"></rect>`;
   });
 
-  // offense (circles)
+  // offense circles
   const predId = offRows[0].nfl_id;
-  offRows.forEach(r=>{
+  offRows.forEach(r => {
+    const [xr, yr] = rot(r.x_mid - r.qb_x, r.y_mid - r.qb_y, ang);
+    const x = mapx(xr), y = mapy(yr);
     const cls = (r.nfl_id === predId) ? "off pred" : "off";
-    const x = mapx(r.x_mid - r.qb_x);
-    const y = mapy(r.y_mid - r.qb_y);
     const last = esc(r.player_name.split(" ").slice(-1)[0]);
     s += `<circle class="${cls}" cx="${x}" cy="${y}" r="5"></circle>`;
     s += `<text x="${x+7}" y="${y-7}">${last}</text>`;
@@ -180,6 +242,7 @@ function svgForPlay(offRows, defRows){
 
   return `<svg width="${W}" height="${H}">${s}</svg>`;
 }
+
 
 
 function tableForPlay(rows){
