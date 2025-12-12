@@ -252,7 +252,11 @@ with tab6:
 
 with tab7:
     st.header("KNN")
-    st.write("Add KNN modeling here.")
+    
+    # sliders
+    alpha = st.slider("Test Size (percent)", 0.1, 0.5, 0.25, step=0.05)
+    k = st.slider("Number of Neighbors (k)", 1, 10, 3, step=2)
+    folds = st.slider("Cross-Validation folds", 3, 10, 5, step=1)
 
 with tab8:
     st.header("External Models (TSNE, UMAP)")
