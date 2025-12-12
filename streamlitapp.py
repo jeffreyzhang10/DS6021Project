@@ -292,20 +292,20 @@ with tab7:
     st.header("KNN")
     
     # sliders
-    alpha = st.slider("Test Size (percent)", 0.1, 0.5, 0.25, step=0.05)
-    chosen_k = st.slider("Number of Neighbors (k)", 1, 41, 23, step=2)
-    folds = st.slider("Cross-Validation folds", 3, 10, 5, step=1)
+    alpha = st.slider("Test Size (percent)", 0.1, 0.5, 0.25, step=0.05) # change test split
+    chosen_k = st.slider("Number of Neighbors (k)", 1, 41, 23, step=2) # change number of neighbors
+    folds = st.slider("Cross-Validation folds", 3, 10, 5, step=1) # change number of CV folds
 
     if st.button("Run KNN Models"):
         with st.spinner("Fitting KNN models..."):
-            model_df = pd.read_csv("knn.csv")
+            model_df = pd.read_csv("knn.csv") # download from modified data set
 
-            y = model_df["pass_completed"]
+            y = model_df["pass_completed"] # response variable: pass completed
 
             X = model_df[[
-            "distance_qb_wr",
-            "orientation_diff",
-            "dropback_distance",
+            "distance_qb_wr", 
+            "orientation_diff", # angle difference between QB and WR
+            "dropback_distance", # how far QB dropped back
             "wr_speed",
             "wr_accel"
             ]]
@@ -319,7 +319,7 @@ with tab7:
 
             param_grid = {"knn__n_neighbors": range(1, 41, 2)}
 
-            grid = GridSearchCV(pipe, param_grid, cv=folds, scoring="balanced_accuracy", n_jobs=-1)
+            grid = GridSearchCV(pipe, param_grid, cv=folds, scoring="balanced_accuracy", n_jobs=-1) # use chosen number of folds
             grid.fit(X_train, y_train)
 
             results_df = pd.DataFrame(grid.cv_results_)
@@ -332,7 +332,7 @@ with tab7:
 
             pipe2 = Pipeline([
                 ("scaler", StandardScaler()),
-                ("knn", KNeighborsClassifier(n_neighbors=chosen_k,
+                ("knn", KNeighborsClassifier(n_neighbors=chosen_k, # use the chosen number of neighbors
                 weights="distance"))
             ])
 
@@ -343,8 +343,8 @@ with tab7:
             bal_acc = balanced_accuracy_score(y_test, y_pred)
 
         st.subheader("Results")
-        st.write(f"**Accuracy:** {acc:.3f}")
-        st.write(f"**Balanced Accuracy:** {bal_acc:.3f}")
+        st.write(f"**Accuracy:** {acc:.3f}") # Print accuracy score
+        st.write(f"**Balanced Accuracy:** {bal_acc:.3f}") # Print balanced accuracy score
 
 with tab8:
     st.header("External Models (TSNE, UMAP)")
