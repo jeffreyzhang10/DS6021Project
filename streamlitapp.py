@@ -333,6 +333,14 @@ with tab6:
         off = df_play[df_play["player_side"] == "OFFENSE"].copy()
         dfn = df_play[df_play["player_side"] == "DEFENSE"].copy()
 
+        num_defenders_observed = int(dfn["nfl_id"].nunique())
+        dl_closing = 11 - num_defenders_observed
+
+        # attach as play-level feature to every offensive row
+        off["dl_closing"] = dl_closing
+        COEF["dl_closing"] = -0.6   # start here
+
+
         qb = off[off["position"] == "QB"]
         if qb.empty:
             return pd.DataFrame()
@@ -363,23 +371,47 @@ with tab6:
         off["vel_toward_qb"] = (vel_proj_away < 0).astype(int)
 
         # nearest defender distance
-        if dfn.empty:
-            off["nearest_defender_dist"] = np.nan
-        else:
-            def_xy = dfn[["x_mid", "y_mid"]].to_numpy()
-            nearest = []
-            for ox, oy in off[["x_mid", "y_mid"]].to_numpy():
-                ddx = def_xy[:, 0] - ox
-                ddy = def_xy[:, 1] - oy
-                d = np.sqrt(ddx * ddx + ddy * ddy)
-                nearest.append(float(np.min(d)))
-            off["nearest_defender_dist"] = nearest
+        # -------------------------------
+        # FEATURE: NEAREST DEFENDER DIST
+        # Always include 3 synthetic DL defenders + any real defenders
+        # -------------------------------
+
+        # Synthetic defenders relative to QB (yards)
+        # Assumes x = upfield, y = width
+        SYNTH_OFFSETS = np.array([
+            [ 2.0,  0.0],   # in front of QB
+            [ 0.0, -2.0],   # left of QB
+            [ 0.0,  2.0],   # right of QB
+        ], dtype=float)
+
+        # Build synthetic defenders in absolute coordinates
+        synth_def_xy = np.column_stack([
+            qb_x + SYNTH_OFFSETS[:, 0],
+            qb_y + SYNTH_OFFSETS[:, 1],
+        ])
+
+        # Real defenders (may be empty)
+        real_def_xy = dfn[["x_mid", "y_mid"]].to_numpy() if not dfn.empty else np.empty((0, 2))
+
+        # Combine synthetic + real defenders
+        def_xy = np.vstack([real_def_xy, synth_def_xy])
+
+        # Compute nearest defender distance for each offensive player
+        nearest = []
+        for ox, oy in off[["x_mid", "y_mid"]].to_numpy():
+            ddx = def_xy[:, 0] - ox
+            ddy = def_xy[:, 1] - oy
+            d = np.sqrt(ddx * ddx + ddy * ddy)
+            nearest.append(float(np.min(d)))
+
+        off["nearest_defender_dist"] = nearest
+
 
         off["qb_x"] = qb_x
         off["qb_y"] = qb_y
         return off
 
-    def score_player_row(position: str, dist_to_qb: float, nearest_def: float | None, vel_toward_qb: int) -> float:
+    def score_player_row(position: str, dist_to_qb: float, nearest_def: float | None, vel_toward_qb: int, dl_closing: float) -> float:
         z = INTERCEPT
         if position == "WR":
             z += COEF["position_WR"]
@@ -391,6 +423,7 @@ with tab6:
         z += COEF["dist_to_qb"] * float(dist_to_qb)
         z += COEF["nearest_defender_dist"] * float(0.0 if nearest_def is None else nearest_def)
         z += COEF["vel_toward_qb"] * float(vel_toward_qb)
+        z += COEF["dl_closing"] * float(dl_closing)
         return sigmoid(z)
 
     def make_rows_for_html(off_feat: pd.DataFrame) -> list[dict]:
@@ -402,6 +435,7 @@ with tab6:
                 dist_to_qb=float(r["dist_to_qb"]),
                 nearest_def=ndd,
                 vel_toward_qb=int(r["vel_toward_qb"]),
+                dl_closing=int(r["dl_closing"]),
             )
             rows.append({
                 "nfl_id": int(r["nfl_id"]),
