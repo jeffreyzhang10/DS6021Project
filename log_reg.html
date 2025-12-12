@@ -2,62 +2,151 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Receiver Target Prediction (Top-1)</title>
+  <title>Receiver Target Prediction</title>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 18px; }
-    h1 { margin: 0 0 8px 0; }
-    .controls { display:flex; gap:10px; align-items:center; margin: 10px 0 14px; flex-wrap: wrap; }
-    input { padding: 6px 8px; }
-    button { padding: 6px 10px; cursor:pointer; }
-    details { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
-    summary { cursor:pointer; font-weight: 600; }
-    .grid { display:grid; grid-template-columns: 520px 1fr; gap: 14px; align-items:start; margin-top: 10px; }
-    svg { background:#fafafa; border:1px solid #eee; border-radius: 8px; }
-    .axis { stroke:#bbb; stroke-width:1; stroke-dasharray: 3 3; }
-    .qb { fill:#111; }
-    .off { fill:#1f77b4; }
-    .pred { stroke:#ff7f0e; stroke-width:3; }
-    .def { fill:#d62728; opacity:0.85; }
-    text { font-size: 11px; fill:#333; }
-    table { border-collapse: collapse; width:100%; }
-    th, td { border:1px solid #eee; padding:6px 8px; font-size:12px; }
-    th { background:#f5f5f5; text-align:left; }
-    tr.predRow td { background:#fff7ed; }
-    tr.actualRow td { background:#f0fff4; }
-    .note { color:#555; margin-bottom: 10px; }
-    .legend { margin-top: 8px; font-size: 12px; color:#444; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; }
-    .swatch.pred { background:#ff7f0e; }
-    .swatch.off { background:#1f77b4; }
-    .swatch.def { background:#d62728; }
-  </style>
+  /* ---- Global reset inside iframe ---- */
+  body {
+    font-family: Arial, sans-serif;
+    margin: 18px;
+    background: #ffffff !important;
+    color: #111 !important;
+  }
+
+  h1, .note {
+    color: #111 !important;
+  }
+
+  button {
+    padding: 6px 10px;
+    cursor: pointer;
+    background: #f5f5f5;
+    color: #111;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+
+  /* ---- Layout ---- */
+  details {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 12px;
+    background: #ffffff;
+  }
+
+  summary {
+    font-weight: 700;
+    cursor: pointer;
+    color: #111;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 520px 1fr;
+    gap: 14px;
+    margin-top: 10px;
+  }
+
+  /* ---- SVG ---- */
+  svg {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+  }
+
+  .def { fill:#d62728; opacity:0.85; }
+
+  .qb { fill: #111; }
+  .off { fill: #1f77b4; }
+  .pred {
+    stroke: #ff7f0e;
+    stroke-width: 3;
+  }
+
+  text {
+    fill: #111 !important;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ---- TABLE (THIS IS THE IMPORTANT PART) ---- */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #ffffff !important;
+    color: #111 !important;
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    color: #111 !important;
+    font-weight: 700;
+    padding: 8px;
+    border: 1px solid #ccc;
+    text-align: left;
+  }
+
+  td {
+    background: #ffffff !important;
+    color: #111 !important;
+    padding: 8px;
+    border: 1px solid #ddd;
+    font-weight: 500;
+  }
+
+  /* Highlight predicted row */
+  tr.predRow td {
+    background: #fff3e0 !important;
+    color: #111 !important;
+    font-weight: 700;
+  }
+</style>
+
 </head>
+
 <body>
-  <h1>Receiver Target Prediction</h1>
-  <div class="note">
-    Uses features: <code>dist_to_qb</code>, <code>nearest_defender_dist</code>, <code>vel_toward_qb</code>, and <code>position</code>.
-    Points are plotted at mid-frame relative to the QB (QB at origin). Offense = circles, defense = squares.
-  </div>
+<h1>Receiver Target Prediction</h1>
 
-  <div class="controls">
-    <label>Number of random plays: <input id="n" type="number" value="10" min="1" max="50"></label>
-    <label>Seed: <input id="seed" type="number" value="7" min="0"></label>
-    <button id="refresh">Load plays</button>
-  </div>
+<div class="note">
+  Logistic score using:
+  <code>dist_to_qb</code>,
+  <code>nearest_defender_dist</code>,
+  <code>vel_toward_qb</code>,
+  <code>position</code>.
+  <br>
+  Probabilities are <b>relative rankings</b> (no intercept).
+</div>
 
-  <div id="plays"></div>
+<!-- Streamlit will inject the computed play JSON here -->
+<script>
+  // Streamlit will replace __PLAY_DATA_JSON__ with real JSON
+  window.PLAY_DATA = JSON.parse("__PLAY_DATA_JSON__");
+</script>
+
+
+<!-- Button is kept for UI consistency, but no longer fetches from a server -->
+<button id="load" type="button">Load random play</button>
+
+<div id="plays"></div>
 
 <script>
-function esc(s){ return (s ?? "").toString().replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function esc(s){ return (s ?? "").toString()
+  .replaceAll("&","&amp;")
+  .replaceAll("<","&lt;")
+  .replaceAll(">","&gt;");
+}
 
-function svgForPlay(rows){
-  const qb = rows[0];
-  if (qb.qb_x == null || qb.qb_y == null || isNaN(qb.qb_x) || isNaN(qb.qb_y)) {
+function svgForPlay(offRows, defRows){
+  const qb = offRows[0];
+  if (qb.qb_x == null || qb.qb_y == null) {
     return `<div class="note">QB position missing for this play.</div>`;
   }
-  // compute relative coords bounds
-  const rx = rows.map(r => r.x_mid - r.qb_x);
-  const ry = rows.map(r => r.y_mid - r.qb_y);
+
+  const all = [...offRows, ...(defRows || [])];
+
+  const rx = all.map(r => r.x_mid - r.qb_x);
+  const ry = all.map(r => r.y_mid - r.qb_y);
 
   const xmin = Math.min(0, ...rx) - 3;
   const xmax = Math.max(0, ...rx) + 3;
@@ -65,84 +154,93 @@ function svgForPlay(rows){
   const ymax = Math.max(0, ...ry) + 3;
 
   const W=520, H=280;
-  const mapx = x => (x - xmin) / (xmax - xmin) * W;
-  const mapy = y => (1 - (y - ymin) / (ymax - ymin)) * H;
+  const mapx = x => (x - xmin)/(xmax-xmin)*W;
+  const mapy = y => (1-(y-ymin)/(ymax-ymin))*H;
 
-  // QB at origin
-  let shapes = '';
-  shapes += `<circle class="qb" cx="${mapx(0)}" cy="${mapy(0)}" r="6"></circle>`;
-  shapes += `<text x="${mapx(0)+8}" y="${mapy(0)-8}">QB</text>`;
+  let s = `<circle class="qb" cx="${mapx(0)}" cy="${mapy(0)}" r="6"></circle>
+           <text x="${mapx(0)+8}" y="${mapy(0)-8}">QB</text>`;
 
-  // Offense points (rows are offense only in this endpoint)
-  const predId = rows[0].nfl_id;
-  for (const r of rows){
+  // defenders (squares)
+  (defRows || []).forEach(d => {
+    const x = mapx(d.x_mid - d.qb_x);
+    const y = mapy(d.y_mid - d.qb_y);
+    s += `<rect class="def" x="${x-4}" y="${y-4}" width="8" height="8"></rect>`;
+  });
+
+  // offense (circles)
+  const predId = offRows[0].nfl_id;
+  offRows.forEach(r=>{
+    const cls = (r.nfl_id === predId) ? "off pred" : "off";
     const x = mapx(r.x_mid - r.qb_x);
     const y = mapy(r.y_mid - r.qb_y);
-    const last = esc(r.player_name.split(' ').slice(-1)[0]);
-    const cls = (r.nfl_id === predId) ? "off pred" : "off";
-    shapes += `<circle class="${cls}" cx="${x}" cy="${y}" r="5"></circle>`;
-    shapes += `<text x="${x+7}" y="${y-7}">${last}</text>`;
-  }
+    const last = esc(r.player_name.split(" ").slice(-1)[0]);
+    s += `<circle class="${cls}" cx="${x}" cy="${y}" r="5"></circle>`;
+    s += `<text x="${x+7}" y="${y-7}">${last}</text>`;
+  });
 
-  // Axes
-  let axes = '';
-  if (ymin <= 0 && 0 <= ymax) axes += `<line class="axis" x1="${mapx(xmin)}" y1="${mapy(0)}" x2="${mapx(xmax)}" y2="${mapy(0)}"></line>`;
-  if (xmin <= 0 && 0 <= xmax) axes += `<line class="axis" x1="${mapx(0)}" y1="${mapy(ymin)}" x2="${mapx(0)}" y2="${mapy(ymax)}"></line>`;
-
-  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${axes}${shapes}</svg>`;
+  return `<svg width="${W}" height="${H}">${s}</svg>`;
 }
 
+
 function tableForPlay(rows){
-  let trs = '';
-  rows.forEach((r, idx) => {
-    const cls = (idx===0) ? 'predRow' : '';
-    trs += `<tr class="${cls}">
-      <td>${idx+1}</td>
+  let trs = "";
+  rows.forEach((r,i)=>{
+    trs += `<tr class="${i===0?'predRow':''}">
+      <td>${i+1}</td>
       <td>${esc(r.player_name)}</td>
       <td>${esc(r.position)}</td>
-      <td>${r.p_target.toFixed(3)}</td>
-      <td>${r.dist_to_qb.toFixed(2)}</td>
-      <td>${r.nearest_defender_dist==null ? '' : r.nearest_defender_dist.toFixed(2)}</td>
+      <td>${Number(r.p_target).toFixed(3)}</td>
+      <td>${Number(r.dist_to_qb).toFixed(2)}</td>
+      <td>${(r.nearest_defender_dist == null || isNaN(r.nearest_defender_dist)) ? "" : Number(r.nearest_defender_dist).toFixed(2)}</td>
       <td>${r.vel_toward_qb}</td>
     </tr>`;
   });
-  return `<table>
-    <thead><tr><th>Rank</th><th>Player</th><th>Pos</th><th>p(target)</th><th>dist→QB</th><th>nearest def</th><th>vel_toward_qb</th></tr></thead>
-    <tbody>${trs}</tbody>
-  </table>
-  <div class="legend">
-    <span><span class="swatch pred"></span>predicted top-1</span>
-    <span><span class="swatch off"></span>offense</span>
-  </div>`;
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th><th>Player</th><th>Pos</th>
+          <th>Score</th><th>dist→QB</th>
+          <th>nearest def</th><th>vel→QB</th>
+        </tr>
+      </thead>
+      <tbody>${trs}</tbody>
+    </table>`;
 }
 
-async function loadPlays(){
-  const n = document.getElementById('n').value;
-  const seed = document.getElementById('seed').value;
-  const res = await fetch(`/api/random_plays?n=${encodeURIComponent(n)}&seed=${encodeURIComponent(seed)}`);
-  const data = await res.json();
+function renderFromInjectedData(){
+  const data = window.PLAY_DATA || {};
+  const offRows = data.rows || [];
+  const defRows = data.defenders || [];
 
-  const container = document.getElementById('plays');
-  container.innerHTML = '';
+  const container = document.getElementById("plays");
+  container.innerHTML = "";
 
-  data.forEach(play => {
-    const rows = play.rows;
-    const pred = rows[0];
-    const header = `Game ${play.game_id} — Play ${play.play_id} | Pred: ${esc(pred.player_name)} (${esc(pred.position)})`;
-    const html = `
-      <details open>
-        <summary>${header}</summary>
-        <div class="grid">
-          <div>${svgForPlay(rows)}</div>
-          <div>${tableForPlay(rows)}</div>
-        </div>
-      </details>`;
-    container.insertAdjacentHTML('beforeend', html);
-  });
+  if (!offRows.length) {
+    container.innerHTML = `<div class="note">No eligible offensive players for this play.</div>`;
+    return;
+  }
+
+  const header = `Game ${data.game_id} — Play ${data.play_id}
+    | Pred: ${esc(data.pred_player_name)} (${esc(data.pred_position)})`;
+
+  container.innerHTML = `
+    <details open>
+      <summary>${header}</summary>
+      <div class="grid">
+        <div>${svgForPlay(offRows, defRows)}</div>
+        <div>${tableForPlay(offRows)}</div>
+      </div>
+    </details>`;
 }
 
-document.getElementById('refresh').addEventListener('click', loadPlays);
-loadPlays();
+
+// In Streamlit, new play data arrives when the iframe is re-rendered.
+// The button remains, but it just re-renders current injected data.
+document.getElementById("load").addEventListener("click", renderFromInjectedData);
+
+// initial render
+renderFromInjectedData();
 </script>
 </body>
 </html>

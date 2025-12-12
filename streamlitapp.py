@@ -286,22 +286,218 @@ with tab5:
 
 with tab6:
     st.header("Logistic Regression")
+    st.write("Receiver target probability (ranked within-play) using fixed coefficients.")
 
-    if st.button("Run Logistic Regression"):
-        model, off_df, play_stats = train_and_evaluate(data)
-    
-        train_metrics = {
-            #"dataset": f"week_{base_week:02d}",
-            "split_type": "train_split",
-            "top1_accuracy": float(play_stats["top1_correct"].mean()),
-            "mean_true_prob": float(play_stats["true_target_prob"].mean()),
-            "mean_pos_log_loss": float(play_stats["pos_log_loss"].mean())
-        }
-        
-        st.subheader("Training Performance Metrics")
-        st.write(f"**Top-1 Accuracy:** {train_metrics['top1_accuracy']:.4f}")
-        st.write(f"**Mean True Target Probability:** {train_metrics['mean_true_prob']:.4f}")
-        st.write(f"**Mean Positive Log-Loss:** {train_metrics['mean_pos_log_loss']:.4f}")        
+    # ----------------------------
+    # Coefficients (no intercept)
+    # ----------------------------
+    COEF = {
+        "position_WR": 0.8614567411084897,
+        "position_TE": 0.48138759086548055,
+        "position_RB": 0.21843175151292066,
+        "dist_to_qb": -0.19653964181732517,
+        "nearest_defender_dist": 0.10651670100892234,
+        "vel_toward_qb": 0.06956957997670585,
+    }
+    INTERCEPT = 0.0   # unknown; ranking is unaffected
+
+    TRACKING_CSV = "tracking_simplified_2023_all_weeks.csv"
+    HTML_FILE = "log_reg.html"
+    TOPK = 12
+
+    from math import exp
+    import json
+
+    def sigmoid(z: float) -> float:
+        # stable-ish sigmoid
+        if z >= 0:
+            ez = exp(-z)
+            return 1.0 / (1.0 + ez)
+        ez = exp(z)
+        return ez / (1.0 + ez)
+
+    @st.cache_data(show_spinner=False)
+    def load_tracking(path: str) -> pd.DataFrame:
+        df = pd.read_csv(path)
+        df["player_side"] = df["player_side"].astype(str).str.upper().str.strip()
+        df["position"] = df["position"].astype(str).str.upper().str.strip()
+        df["player_name"] = df["player_name"].astype(str)
+        for c in ["x_mid", "y_mid", "s_mid", "dir_mid"]:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+        df["game_id"] = df["game_id"].astype(int)
+        df["play_id"] = df["play_id"].astype(int)
+        df["nfl_id"] = df["nfl_id"].astype(int)
+        return df
+
+    def compute_features_for_play(df_play: pd.DataFrame) -> pd.DataFrame:
+        off = df_play[df_play["player_side"] == "OFFENSE"].copy()
+        dfn = df_play[df_play["player_side"] == "DEFENSE"].copy()
+
+        qb = off[off["position"] == "QB"]
+        if qb.empty:
+            return pd.DataFrame()
+
+        qb_row = qb.iloc[0]
+        qb_x, qb_y = float(qb_row["x_mid"]), float(qb_row["y_mid"])
+
+        # eligible offense only (non-QB)
+        off = off[off["position"] != "QB"].copy()
+        if off.empty:
+            return pd.DataFrame()
+
+        dx = off["x_mid"].to_numpy() - qb_x
+        dy = off["y_mid"].to_numpy() - qb_y
+        dist = np.sqrt(dx * dx + dy * dy)
+        off["dist_to_qb"] = dist
+
+        # vel_toward_qb: projection of velocity onto QB->player direction
+        ux = np.where(dist > 0, dx / dist, 0.0)
+        uy = np.where(dist > 0, dy / dist, 0.0)
+
+        theta = np.radians(off["dir_mid"].to_numpy())
+        s = off["s_mid"].to_numpy()
+        vx = s * np.cos(theta)
+        vy = s * np.sin(theta)
+        vel_proj_away = vx * ux + vy * uy
+
+        off["vel_toward_qb"] = (vel_proj_away < 0).astype(int)
+
+        # nearest defender distance
+        if dfn.empty:
+            off["nearest_defender_dist"] = np.nan
+        else:
+            def_xy = dfn[["x_mid", "y_mid"]].to_numpy()
+            nearest = []
+            for ox, oy in off[["x_mid", "y_mid"]].to_numpy():
+                ddx = def_xy[:, 0] - ox
+                ddy = def_xy[:, 1] - oy
+                d = np.sqrt(ddx * ddx + ddy * ddy)
+                nearest.append(float(np.min(d)))
+            off["nearest_defender_dist"] = nearest
+
+        off["qb_x"] = qb_x
+        off["qb_y"] = qb_y
+        return off
+
+    def score_player_row(position: str, dist_to_qb: float, nearest_def: float | None, vel_toward_qb: int) -> float:
+        z = INTERCEPT
+        if position == "WR":
+            z += COEF["position_WR"]
+        elif position == "TE":
+            z += COEF["position_TE"]
+        elif position == "RB":
+            z += COEF["position_RB"]
+
+        z += COEF["dist_to_qb"] * float(dist_to_qb)
+        z += COEF["nearest_defender_dist"] * float(0.0 if nearest_def is None else nearest_def)
+        z += COEF["vel_toward_qb"] * float(vel_toward_qb)
+        return sigmoid(z)
+
+    def make_rows_for_html(off_feat: pd.DataFrame) -> list[dict]:
+        rows = []
+        for _, r in off_feat.iterrows():
+            ndd = None if pd.isna(r["nearest_defender_dist"]) else float(r["nearest_defender_dist"])
+            p = score_player_row(
+                position=str(r["position"]),
+                dist_to_qb=float(r["dist_to_qb"]),
+                nearest_def=ndd,
+                vel_toward_qb=int(r["vel_toward_qb"]),
+            )
+            rows.append({
+                "nfl_id": int(r["nfl_id"]),
+                "player_name": str(r["player_name"]),
+                "position": str(r["position"]),
+                "p_target": float(p),
+                "dist_to_qb": float(r["dist_to_qb"]),
+                "nearest_defender_dist": ndd,
+                "vel_toward_qb": int(r["vel_toward_qb"]),
+                "x_mid": float(r["x_mid"]),
+                "y_mid": float(r["y_mid"]),
+                "qb_x": float(r["qb_x"]),
+                "qb_y": float(r["qb_y"]),
+            })
+        rows.sort(key=lambda x: x["p_target"], reverse=True)
+        return rows[:TOPK]
+
+    def make_defenders_for_html(df_play: pd.DataFrame, qb_x: float, qb_y: float) -> list[dict]:
+        dfn = df_play[df_play["player_side"] == "DEFENSE"].copy()
+        out = []
+        for _, r in dfn.iterrows():
+            # guard against missing coords
+            if pd.isna(r["x_mid"]) or pd.isna(r["y_mid"]):
+                continue
+            out.append({
+                "nfl_id": int(r["nfl_id"]),
+                "player_name": str(r["player_name"]),
+                "position": str(r["position"]),
+                "x_mid": float(r["x_mid"]),
+                "y_mid": float(r["y_mid"]),
+                "qb_x": float(qb_x),
+                "qb_y": float(qb_y),
+            })
+        return out
+
+
+    # ----------------------------
+    # UI: choose a play
+    # ----------------------------
+    try:
+        tracking = load_tracking(TRACKING_CSV)
+    except FileNotFoundError:
+        st.error(f"Missing file: {TRACKING_CSV}")
+        st.stop()
+
+    plays = tracking[["game_id", "play_id"]].drop_duplicates().sort_values(["game_id", "play_id"])
+
+    # Initialize RNG once
+    if "lr_rng" not in st.session_state:
+        st.session_state["lr_rng"] = np.random.default_rng()
+
+    if st.button("Random play", key="lr_random_play"):
+        idx = int(st.session_state["lr_rng"].integers(0, len(plays)))
+        st.session_state["lr_game_id"] = int(plays.iloc[idx]["game_id"])
+        st.session_state["lr_play_id"] = int(plays.iloc[idx]["play_id"])
+
+
+    game_id = st.number_input("game_id", value=int(st.session_state.get("lr_game_id", plays.iloc[0]["game_id"])))
+    play_id = st.number_input("play_id", value=int(st.session_state.get("lr_play_id", plays.iloc[0]["play_id"])))
+
+    df_play = tracking[(tracking["game_id"] == int(game_id)) & (tracking["play_id"] == int(play_id))]
+    off_feat = compute_features_for_play(df_play)
+
+    if off_feat.empty:
+        st.error("Could not compute this play (missing QB or no eligible offense).")
+        st.stop()
+
+    rows = make_rows_for_html(off_feat)
+    pred = rows[0] if rows else None
+
+    qb_x = float(off_feat["qb_x"].iloc[0])
+    qb_y = float(off_feat["qb_y"].iloc[0])
+
+    rows = make_rows_for_html(off_feat)
+    pred = rows[0] if rows else None
+    defenders = make_defenders_for_html(df_play, qb_x, qb_y)
+
+    payload = {
+        "game_id": int(game_id),
+        "play_id": int(play_id),
+        "rows": rows,
+        "defenders": defenders,
+        "pred_player_name": pred["player_name"] if pred else "",
+        "pred_position": pred["position"] if pred else "",
+    }
+
+    with open(HTML_FILE, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # safer string injection for JSON.parse("..."):
+    html = html.replace("__PLAY_DATA_JSON__", json.dumps(payload).replace("\\", "\\\\").replace('"', '\\"'))
+
+    st.components.v1.html(html, height=900, scrolling=True)
+
+
+
 
 with tab7:
     st.header("KNN")
