@@ -48,11 +48,11 @@ with tab1:
 
     st.write('Data Source Link: https://www.kaggle.com/competitions/nfl-big-data-bowl-2026-prediction/data')
 
-    st.write('This project looks to use data from the **NFL Big Data Bowl 2026** competition on Kaggle to predict player movements on a play-by-play basis. ical movement patterns. Throughout the project, we will conduct exploratory data analysis, as well as use various machine learning techniques to gauge any interpretable insights and evalutate the performance of our chosen models.')
+    st.write('This project looks to use data from the **NFL Big Data Bowl 2026** competition on Kaggle to predict player movements on a play-by-play basis. ical movement patterns. Throughout the project, we will conduct exploratory data analysis, as well as use various machine learning techniques to gauge any interpretable insights and evalutate the performance of our chosen models. The goal of this data and the project itself is to be able to leverage live, action data from actual plays in the National Football League to understand player behavior and play dynamics, which in turn allows us to make a variety of predictions that we are interested below.')
 
-    st.write('Team Goals: Identifying play type, player location, intended player target, predicting pass completion')
+    st.write('Team Goals: Clasisifying play type, player location, intended player target, predicting and estimating pass completion percentage')
 
-    st.write('Research Question: Can we use machine learning methods to accurately classify play type and the intended receiver? Could we also use other methods to predict player field location and probability of pass completion? ')
+    st.write('Research Question: Can we use classification machine learning methods to accurately classify play type and the intended receiver based on spatial and movement features? To what extent could we also use other predictive methods to predict player field location and estimate the probability of pass completion? ')
 
     st.write('Methods Explored: EDA, PCA, K-Means, PCR, Linear Regression, Logistic Regression, KNN, t-SNE, & UMAP')
 
