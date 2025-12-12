@@ -342,7 +342,7 @@ with tab7:
             acc = accuracy_score(y_test, y_pred)
             bal_acc = balanced_accuracy_score(y_test, y_pred)
 
-            st.session_state["pipe2"] = pipe2
+            st.session_state["pipe2"] = pipe2 # save model for later interaction
 
         st.subheader("Results")
         st.write(f"**Accuracy:** {acc:.3f}") # Print accuracy score
@@ -350,20 +350,20 @@ with tab7:
 
     st.subheader("Adjust the sliders to simulate a new play.")
 
-    new_play = {}
+    new_play = {} # initialize new play data set
 
     new_play["distance_qb_wr"] = st.slider(
-            "QB to Receiver Distance (yards)",
+            "QB to Receiver Distance (yards)", # distance between QB and WR
             0.0, 55.0, 15.0, step=1.0
         )
 
     new_play["orientation_diff"] = st.slider(
-            "Orientation Difference (degrees)",
+            "Orientation Difference (degrees)", # Angle between QB and WR
             0.0, 360.0, 120.0, step=5.0
         )
 
     new_play["dropback_distance"] = st.slider(
-            "QB Dropback Distance",
+            "QB Dropback Distance", # how far QB dropped back
             0.0, 12.0, 3.0, step=1.0
         )
 
@@ -377,15 +377,15 @@ with tab7:
             0.0, 8.0, 3.0, step=1.0
         )
         
-    new_play_df = pd.DataFrame([new_play])
+    new_play_df = pd.DataFrame([new_play]) # convert to data frame
 
     if st.button("Predict Completion"):
         if "pipe2" not in st.session_state:
-            st.error("Run KNN models first")
+            st.error("Run KNN models first") # make sure user does not press predict before models are fit
         else:
-            model = st.session_state["pipe2"]
-            prediction = model.predict(new_play_df)
-            label_map = {0: "Incomplete", 1: "Complete"}
+            model = st.session_state["pipe2"] # reuse saved model
+            prediction = model.predict(new_play_df) # run prediction on new play
+            label_map = {0: "Incomplete", 1: "Complete"} # convert 0, 1 to incomplete, complete
             pred_label = label_map[int(prediction[0])]
             st.write(f"Predicted pass result: **{pred_label}**")
 
