@@ -139,8 +139,8 @@ def build_offense_vectors(df_raw: pd.DataFrame) -> pd.DataFrame:
         )
 
         # Vector from offensive player to defender (final frame)
-        pairs["vec_od_x"] = pairs["x_def"] - pairs["x_off"]
-        pairs["vec_od_y"] = pairs["y_def"] - pairs["y_off"]
+        pairs["vec_od_x"] = pairs["x_clean_def"] - pairs["x_clean_off"]
+        pairs["vec_od_y"] = pairs["y_clean_def"] - pairs["y_clean_off"]
 
         # Distance to each defender
         pairs["dist_off_def"] = np.sqrt(
