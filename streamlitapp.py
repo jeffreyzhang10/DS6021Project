@@ -22,7 +22,7 @@ data = pd.read_csv("input_data_clean.csv")
 
 st.set_page_config(page_title="DS6021 Final Project", layout="wide")
 
-st.image("banner.jpg", width=None)
+st.image("banner.jpg", width='stretch')
 
 # tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
