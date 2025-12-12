@@ -24,6 +24,8 @@ st.set_page_config(page_title="DS6021 Final Project", layout="wide")
 
 st.image("banner.jpg", width='stretch')
 
+# source: https://wallpapers.com/wallpapers/hd-nfl-xjf8tus82jl2jurr.html#google_vignette
+
 # tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Introduction",
